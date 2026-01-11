@@ -3,6 +3,8 @@ package db
 import (
 	"database/sql"
 	"log"
+	"os"
+	"path/filepath"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -11,7 +13,20 @@ var DB *sql.DB
 
 func InitDB() {
 	var err error
-	DB, err = sql.Open("sqlite3", "./jobseek.db")
+
+	// Use data directory for database (supports Docker volumes)
+	dbPath := os.Getenv("DB_PATH")
+	if dbPath == "" {
+		dbPath = "./data/jobseek.db"
+	}
+
+	// Create data directory if it doesn't exist
+	dataDir := filepath.Dir(dbPath)
+	if err := os.MkdirAll(dataDir, 0755); err != nil {
+		log.Fatal("Failed to create data directory:", err)
+	}
+
+	DB, err = sql.Open("sqlite3", dbPath)
 	if err != nil {
 		log.Fatal(err)
 	}

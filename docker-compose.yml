@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  expatter:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: expatter-app:latest
+    container_name: expatter-server
+    restart: unless-stopped
+    ports:
+      - "8014:8080"
+    volumes:
+      # Persistent database storage
+      - expatter-data:/app/data
+    environment:
+      # Application settings
+      - PORT=8080
+      - APP_NAME=Expatter
+      - APP_DOMAIN=https://expatter.gyokhan.com
+
+      # Email settings (Resend)
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - EMAIL_FROM=jobs@expatter.gyokhan.com
+
+      # Scheduler settings
+      - SCHEDULER_FREQUENCY=@every 1h
+
+    healthcheck:
+      test: [ "CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/" ]
+      interval: 30s
+      timeout: 30s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  expatter-data:
+    driver: local

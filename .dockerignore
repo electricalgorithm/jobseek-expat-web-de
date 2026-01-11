@@ -1,0 +1,30 @@
+# Git
+.git
+.gitignore
+
+# Documentation
+*.md
+!DEPLOYMENT.md
+
+# Development files
+.env
+.env.local
+*.db
+data/
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Dependencies (will be downloaded during build)
+node_modules/
+vendor/
