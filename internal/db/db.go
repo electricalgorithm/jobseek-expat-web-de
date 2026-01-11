@@ -32,4 +32,24 @@ func InitDB() {
 	}
 	statement.Exec()
 	log.Println("Users table created")
+
+	createSearchesTableSQL := `CREATE TABLE IF NOT EXISTS user_searches (
+		"id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+		"user_id" INTEGER NOT NULL,
+		"keyword" TEXT,
+		"country" TEXT,
+		"location" TEXT,
+		"language" TEXT,
+		"frequency" TEXT DEFAULT 'hourly',
+		"last_run" DATETIME,
+		FOREIGN KEY(user_id) REFERENCES users(id)
+	);`
+
+	log.Println("Creating user_searches table...")
+	stmtSearches, err := DB.Prepare(createSearchesTableSQL)
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+	stmtSearches.Exec()
+	log.Println("User searches table created")
 }

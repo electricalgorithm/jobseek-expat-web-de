@@ -1,14 +1,10 @@
 package handlers
 
 import (
-	"bytes"
 	"encoding/json"
-	"fmt"
+	"jobseek-web-be/internal/search"
 	"log"
 	"net/http"
-	"os"
-	"os/exec"
-	"path/filepath"
 )
 
 type SearchRequest struct {
@@ -36,61 +32,22 @@ func SearchHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Default values
-	if req.Country == "" {
-		req.Country = "Germany"
-	}
-	resultsWanted := "10"
-	if req.ResultsWanted > 0 {
-		resultsWanted = fmt.Sprintf("%d", req.ResultsWanted)
-	}
-
-	// Construct arguments
-	args := []string{req.Keyword, "--country", req.Country, "--output", "json", "--results-wanted", resultsWanted}
-
-	if req.Location != "" {
-		args = append(args, "--location", req.Location)
-	}
-	if req.LocalLanguage != "" {
-		args = append(args, "--local-language", req.LocalLanguage)
+	// Map request to service params
+	params := search.SearchParams{
+		Keyword:       req.Keyword,
+		Country:       req.Country,
+		Location:      req.Location,
+		LocalLanguage: req.LocalLanguage,
+		ResultsWanted: req.ResultsWanted,
 	}
 
-	log.Printf("Running search: jobseek-expat %v", args)
-
-	// Execute CLI
-	cmdPath := getJobSeekPath()
-	cmd := exec.Command(cmdPath, args...)
-
-	// Capture stderr separately
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-
-	output, err := cmd.Output()
+	results, err := search.ExecuteSearch(params)
 	if err != nil {
-		log.Printf("Error running command: %v, Stderr: %s", err, stderr.String())
-		http.Error(w, fmt.Sprintf("Error executing search: %s", stderr.String()), http.StatusInternalServerError)
+		log.Printf("Search failed: %v", err)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	w.Write(output)
-}
-
-func getJobSeekPath() string {
-	path, err := exec.LookPath("jobseek-expat")
-	if err == nil {
-		return path
-	}
-	home, _ := os.UserHomeDir()
-	fallback := filepath.Join(home, "Library/Python/3.14/bin/jobseek-expat")
-	if _, err := os.Stat(fallback); err == nil {
-		return fallback
-	}
-	// Fallback for older python versions or different setups
-	fallback312 := filepath.Join(home, "Library/Python/3.12/bin/jobseek-expat")
-	if _, err := os.Stat(fallback312); err == nil {
-		return fallback312
-	}
-
-	return "jobseek-expat"
+	json.NewEncoder(w).Encode(results)
 }
