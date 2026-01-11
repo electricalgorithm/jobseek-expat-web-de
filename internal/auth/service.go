@@ -43,13 +43,10 @@ func RegisterUser(req models.RegisterRequest) error {
 		return err
 	}
 
-	// 4. Calculate trial end date (7 days from now)
-	trialEndsAt := time.Now().Add(7 * 24 * time.Hour)
-
-	// 5. Insert user with trial period
+	// 4. Insert user as trial user (paid = 0)
 	_, err = db.DB.Exec(
-		"INSERT INTO users(name, email, password, subscription_plan, trial_ends_at) VALUES(?, ?, ?, ?, ?)",
-		req.Name, req.Email, string(hashedPassword), req.Subscription, trialEndsAt,
+		"INSERT INTO users(name, email, password, subscription_plan, paid) VALUES(?, ?, ?, ?, 0)",
+		req.Name, req.Email, string(hashedPassword), req.Subscription,
 	)
 	return err
 }
