@@ -40,6 +40,7 @@ func main() {
 	http.HandleFunc("/api/search", handlers.SearchHandler)
 	http.HandleFunc("/api/redirect", handlers.RedirectHandler)
 	http.HandleFunc("/api/unsubscribe", handlers.UnsubscribeHandler)
+	http.HandleFunc("/api/searches", handlers.SaveSearchHandler)
 
 	// Start Scheduler
 	scheduler := scheduler.NewScheduler()
