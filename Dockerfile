@@ -1,11 +1,11 @@
 # Multi-stage Dockerfile for Expatter Application
-# Assumes repos are already cloned locally
+# Build context should be the parent directory containing both repos
 
 # Stage 1: Build Frontend
 FROM node:18-alpine AS frontend-builder
 
 WORKDIR /build
-COPY ../jobseek-web-fe ./frontend
+COPY jobseek-expat-web-fe ./frontend
 
 # Build frontend
 WORKDIR /build/frontend
@@ -13,13 +13,13 @@ RUN npm ci
 RUN npm run build
 
 # Stage 2: Build Backend
-FROM golang:1.21-alpine AS backend-builder
+FROM golang:1.25-alpine AS backend-builder
 
 # Install build dependencies
 RUN apk add --no-cache gcc musl-dev sqlite-dev
 
 WORKDIR /build
-COPY . ./backend
+COPY jobseek-expat-web-be ./backend
 
 # Build backend
 WORKDIR /build/backend
