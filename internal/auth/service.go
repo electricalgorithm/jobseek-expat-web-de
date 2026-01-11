@@ -58,12 +58,13 @@ func LoginUser(creds models.Credentials) (string, string, string, error) {
 	var storedPassword string
 	var subscription string
 	var name string
-	var trialEndsAt sql.NullTime
+	var createdAt time.Time
+	var paid bool
 
 	err := db.DB.QueryRow(
-		"SELECT password, subscription_plan, name, trial_ends_at FROM users WHERE email=?",
+		"SELECT password, subscription_plan, name, created_at, paid FROM users WHERE email=?",
 		creds.Email,
-	).Scan(&storedPassword, &subscription, &name, &trialEndsAt)
+	).Scan(&storedPassword, &subscription, &name, &createdAt, &paid)
 
 	if err == sql.ErrNoRows {
 		return "", "", "", errors.New("Invalid credentials")
@@ -75,8 +76,11 @@ func LoginUser(creds models.Credentials) (string, string, string, error) {
 		return "", "", "", errors.New("Invalid credentials")
 	}
 
-	// Check if trial has expired
-	if trialEndsAt.Valid && time.Now().After(trialEndsAt.Time) {
+	// Calculate trial end date (7 days from account creation)
+	trialEndsAt := createdAt.Add(7 * 24 * time.Hour)
+
+	// Check if trial has expired (only for non-paid users)
+	if !paid && time.Now().After(trialEndsAt) {
 		return "", "", "", errors.New("Trial period has expired - please upgrade your subscription")
 	}
 
@@ -85,12 +89,13 @@ func LoginUser(creds models.Credentials) (string, string, string, error) {
 		"email": creds.Email,
 		"name":  name,
 		"sub":   subscription,
+		"paid":  paid,
 		"exp":   time.Now().Add(time.Hour * 24).Unix(),
 	}
 
-	// Add trial info if exists
-	if trialEndsAt.Valid {
-		claims["trial_ends_at"] = trialEndsAt.Time.Unix()
+	// Add trial info for non-paid users
+	if !paid {
+		claims["trial_ends_at"] = trialEndsAt.Unix()
 	}
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

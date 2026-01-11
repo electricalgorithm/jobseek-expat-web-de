@@ -22,6 +22,7 @@ func InitDB() {
 		"email" TEXT NOT NULL UNIQUE,
 		"password" TEXT NOT NULL,
 		"subscription_plan" TEXT DEFAULT 'basic',
+		"paid" INTEGER DEFAULT 0,
 		"created_at" DATETIME DEFAULT CURRENT_TIMESTAMP
 	);`
 
