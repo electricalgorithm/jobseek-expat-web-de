@@ -30,7 +30,8 @@ RUN CGO_ENABLED=1 GOOS=linux go build -a -installsuffix cgo -o expatter-server .
 FROM alpine:latest
 
 # Install runtime dependencies
-RUN apk add --no-cache ca-certificates sqlite-libs python3 py3-pip
+# gcompat provides libresolv.so.2 and other glibc compatibility
+RUN apk add --no-cache ca-certificates sqlite-libs python3 py3-pip gcompat libgcc libstdc++
 
 # Install jobseek-expat CLI (Python package)
 RUN pip3 install --no-cache-dir jobseek-expat --break-system-packages
