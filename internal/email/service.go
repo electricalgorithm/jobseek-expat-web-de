@@ -25,7 +25,6 @@ type EmailData struct {
 	SearchID       int
 	JobCount       int
 	Jobs           []JobResult
-	MoreCount      int
 	UnsubscribeURL string
 }
 
@@ -43,10 +42,7 @@ func SendJobAlert(toEmail, userName string, userID, searchID int, jobs []interfa
 
 	// Prepare Data
 	var jobList []JobResult
-	for i, job := range jobs {
-		if i >= 10 {
-			break
-		}
+	for _, job := range jobs {
 		j, ok := job.(map[string]interface{})
 		if ok {
 			title := j["title"].(string)
@@ -70,12 +66,6 @@ func SendJobAlert(toEmail, userName string, userID, searchID int, jobs []interfa
 			})
 		}
 	}
-
-	moreCount := 0
-	if len(jobs) > 10 {
-		moreCount = len(jobs) - 10
-	}
-
 	unsubscribeURL := fmt.Sprintf("%s/unsubscribe?uid=%d&sid=%d", domain, userID, searchID)
 
 	data := EmailData{
@@ -85,7 +75,6 @@ func SendJobAlert(toEmail, userName string, userID, searchID int, jobs []interfa
 		SearchID:       searchID,
 		JobCount:       len(jobs),
 		Jobs:           jobList,
-		MoreCount:      moreCount,
 		UnsubscribeURL: unsubscribeURL,
 	}
 

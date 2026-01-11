@@ -23,7 +23,7 @@ func ExecuteSearch(params SearchParams) ([]interface{}, error) {
 	if params.Country == "" {
 		params.Country = "Germany"
 	}
-	resultsWanted := "10"
+	resultsWanted := "30"
 	if params.ResultsWanted > 0 {
 		resultsWanted = fmt.Sprintf("%d", params.ResultsWanted)
 	}
