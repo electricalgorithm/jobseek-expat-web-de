@@ -18,6 +18,7 @@ services:
       - PORT=8080
       - APP_NAME=Expatter
       - APP_DOMAIN=https://expatter.gyokhan.com
+      - FRONTEND_PATH=/app/frontend/dist
 
       # Email settings (Resend)
       - RESEND_API_KEY=${RESEND_API_KEY}

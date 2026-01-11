@@ -47,18 +47,22 @@ func main() {
 	scheduler.Start()
 	defer scheduler.Stop()
 
-	// Serve Static Files (Frontend)
 	// Serve Static Files (Frontend) with SPA support
-	frontendFS := http.FileServer(http.Dir("../jobseek-web-fe/dist"))
+	frontendPath := os.Getenv("FRONTEND_PATH")
+	if frontendPath == "" {
+		frontendPath = "../jobseek-web-fe/dist" // Default for local development
+	}
+
+	frontendFS := http.FileServer(http.Dir(frontendPath))
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		// If path starts with /api, let it fall through (though /api is handled by specific routes above)
 		// But since we use exact matches or prefixes, explicit API routes take precedence.
 
 		// Check if file exists in dist
-		path := "../jobseek-web-fe/dist" + r.URL.Path
+		path := frontendPath + r.URL.Path
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			// File does not exist, serve index.html
-			http.ServeFile(w, r, "../jobseek-web-fe/dist/index.html")
+			http.ServeFile(w, r, frontendPath+"/index.html")
 			return
 		}
 		// Serves the actual file
