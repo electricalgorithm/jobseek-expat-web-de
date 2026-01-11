@@ -16,6 +16,8 @@ type SearchParams struct {
 	Location      string
 	LocalLanguage string
 	ResultsWanted int
+	HoursOld      int
+	Exclude       string
 }
 
 func ExecuteSearch(params SearchParams) ([]interface{}, error) {
@@ -28,17 +30,6 @@ func ExecuteSearch(params SearchParams) ([]interface{}, error) {
 		resultsWanted = fmt.Sprintf("%d", params.ResultsWanted)
 	}
 
-	// Construct arguments - we assume "search" command is implicit or entry point?
-	// The original handler called `exec.Command(cmdPath, args...)` where args started with Keyword (argument 1).
-	// Let's verify how the CLI works.
-	// The `jobseek-expat` command takes arguments directly?
-	// Looking at handlers/search.go: args := []string{req.Keyword, ...}
-	// So `jobseek-expat <keyword> ...`
-	// Wait, viewed_file 1 said "Start of search command definition".
-	// The CLI entry point `jobseek-expat` might need a `search` subcommand if it's a Typer app with multiple commands.
-	// But the handler uses `args := []string{req.Keyword, ...}`. This suggests `jobseek-expat keyword --options`.
-	// I will stick to what the handler was doing.
-
 	args := []string{params.Keyword, "--country", params.Country, "--output", "json", "--results-wanted", resultsWanted}
 
 	if params.Location != "" {
@@ -46,6 +37,12 @@ func ExecuteSearch(params SearchParams) ([]interface{}, error) {
 	}
 	if params.LocalLanguage != "" {
 		args = append(args, "--local-language", params.LocalLanguage)
+	}
+	if params.HoursOld > 0 {
+		args = append(args, "--hours-old", fmt.Sprintf("%d", params.HoursOld))
+	}
+	if params.Exclude != "" {
+		args = append(args, "--exclude", params.Exclude)
 	}
 
 	log.Printf("Running search (Service): jobseek-expat %v", args)

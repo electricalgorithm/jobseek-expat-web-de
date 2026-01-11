@@ -83,8 +83,8 @@ func SaveSearchHandler(w http.ResponseWriter, r *http.Request) {
 	var existingID int
 	err = db.DB.QueryRow(`
 		SELECT id FROM user_searches 
-		WHERE user_id = ? AND keyword = ? AND country = ? AND location = ? AND language = ?
-	`, userID, req.Keyword, req.Country, req.Location, req.Language).Scan(&existingID)
+		WHERE user_id = ? AND keyword = ? AND country = ? AND location = ? AND language = ? AND hours_old = ? AND exclude = ? AND results_wanted = ?
+	`, userID, req.Keyword, req.Country, req.Location, req.Language, req.HoursOld, req.Exclude, req.ResultsWanted).Scan(&existingID)
 
 	if err == nil {
 		// Search already exists
@@ -102,9 +102,9 @@ func SaveSearchHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Insert Search (only if it doesn't exist)
 	_, err = db.DB.Exec(`
-        INSERT INTO user_searches (user_id, keyword, country, location, language, frequency, last_run)
-        VALUES (?, ?, ?, ?, ?, ?, NULL)
-    `, userID, req.Keyword, req.Country, req.Location, req.Language, req.Frequency)
+        INSERT INTO user_searches (user_id, keyword, country, location, language, frequency, hours_old, exclude, results_wanted, last_run)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL)
+    `, userID, req.Keyword, req.Country, req.Location, req.Language, req.Frequency, req.HoursOld, req.Exclude, req.ResultsWanted)
 
 	if err != nil {
 		http.Error(w, "Failed to save search: "+err.Error(), http.StatusInternalServerError)

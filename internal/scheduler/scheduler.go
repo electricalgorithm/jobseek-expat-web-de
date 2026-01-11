@@ -51,22 +51,25 @@ func (s *JobScheduler) Stop() {
 func RunJobSearchTask() {
 	// 1. Fetch all active searches into memory to avoid locking the DB during long processing
 	type SearchTask struct {
-		ID        int
-		UserID    int
-		Keyword   string
-		Country   string
-		Location  string
-		Language  string
-		UserEmail string
-		UserName  string
-		Frequency string
-		LastRun   sql.NullTime
+		ID            int
+		UserID        int
+		Keyword       string
+		Country       string
+		Location      string
+		Language      string
+		UserEmail     string
+		UserName      string
+		Frequency     string
+		HoursOld      sql.NullInt64
+		Exclude       sql.NullString
+		ResultsWanted sql.NullInt64
+		LastRun       sql.NullTime
 	}
 
 	var tasks []SearchTask
 
 	rows, err := db.DB.Query(`
-		SELECT us.id, us.user_id, us.keyword, us.country, us.location, us.language, u.email, u.name, us.frequency, us.last_run
+		SELECT us.id, us.user_id, us.keyword, us.country, us.location, us.language, u.email, u.name, us.frequency, us.hours_old, us.exclude, us.results_wanted, us.last_run
 		FROM user_searches us 
 		JOIN users u ON us.user_id = u.id
 	`)
@@ -80,7 +83,7 @@ func RunJobSearchTask() {
 		var t SearchTask
 		var loc, lang sql.NullString
 
-		if err := rows.Scan(&t.ID, &t.UserID, &t.Keyword, &t.Country, &loc, &lang, &t.UserEmail, &t.UserName, &t.Frequency, &t.LastRun); err != nil {
+		if err := rows.Scan(&t.ID, &t.UserID, &t.Keyword, &t.Country, &loc, &lang, &t.UserEmail, &t.UserName, &t.Frequency, &t.HoursOld, &t.Exclude, &t.ResultsWanted, &t.LastRun); err != nil {
 			log.Printf("[Scheduler] Error scanning row: %v", err)
 			continue
 		}
@@ -115,7 +118,23 @@ func RunJobSearchTask() {
 			}
 		}
 
-		log.Printf("[Scheduler] Processing search %d for %s (Keyword: %s)", t.ID, t.UserEmail, t.Keyword)
+		log.Printf("[Scheduler] Processing alert for user %s: %s in %s", t.UserEmail, t.Keyword, t.Country)
+
+		// Create SearchParams from task
+		hoursOld := 24 // Default
+		if t.HoursOld.Valid {
+			hoursOld = int(t.HoursOld.Int64)
+		}
+
+		exclude := ""
+		if t.Exclude.Valid {
+			exclude = t.Exclude.String
+		}
+
+		resultsWanted := 10 // Default
+		if t.ResultsWanted.Valid {
+			resultsWanted = int(t.ResultsWanted.Int64)
+		}
 
 		// Execute Search
 		params := search.SearchParams{
@@ -123,7 +142,9 @@ func RunJobSearchTask() {
 			Country:       t.Country,
 			Location:      t.Location,
 			LocalLanguage: t.Language,
-			ResultsWanted: 20,
+			ResultsWanted: resultsWanted,
+			HoursOld:      hoursOld,
+			Exclude:       exclude,
 		}
 
 		results, err := search.ExecuteSearch(params)

@@ -17,6 +17,8 @@ type SearchRequest struct {
 	Location      string `json:"location"`
 	LocalLanguage string `json:"local_language"`
 	ResultsWanted int    `json:"results_wanted"`
+	HoursOld      int    `json:"hours_old"`
+	Exclude       string `json:"exclude"`
 }
 
 func SearchHandler(w http.ResponseWriter, r *http.Request) {
@@ -55,6 +57,8 @@ func SearchHandler(w http.ResponseWriter, r *http.Request) {
 		Location:      req.Location,
 		LocalLanguage: req.LocalLanguage,
 		ResultsWanted: req.ResultsWanted,
+		HoursOld:      req.HoursOld,
+		Exclude:       req.Exclude,
 	}
 
 	results, err := search.ExecuteSearch(params)

@@ -57,6 +57,9 @@ func InitDB() {
 		"location" TEXT,
 		"language" TEXT,
 		"frequency" TEXT DEFAULT 'hourly',
+		"hours_old" INTEGER DEFAULT 24,
+		"exclude" TEXT DEFAULT '',
+		"results_wanted" INTEGER DEFAULT 10,
 		"last_run" DATETIME,
 		FOREIGN KEY(user_id) REFERENCES users(id)
 	);`
@@ -68,4 +71,9 @@ func InitDB() {
 	}
 	stmtSearches.Exec()
 	log.Println("User searches table created")
+
+	// Add new columns if they don't exist (for existing databases)
+	_, _ = DB.Exec("ALTER TABLE user_searches ADD COLUMN hours_old INTEGER DEFAULT 24")
+	_, _ = DB.Exec("ALTER TABLE user_searches ADD COLUMN exclude TEXT DEFAULT ''")
+	_, _ = DB.Exec("ALTER TABLE user_searches ADD COLUMN results_wanted INTEGER DEFAULT 10")
 }
