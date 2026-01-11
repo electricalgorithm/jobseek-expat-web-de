@@ -2,9 +2,13 @@ package handlers
 
 import (
 	"encoding/json"
+	"jobseek-web-be/internal/auth"
 	"jobseek-web-be/internal/search"
 	"log"
 	"net/http"
+	"strings"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type SearchRequest struct {
@@ -21,10 +25,22 @@ func SearchHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// NOTE: In a real implementation with plans, we would check the user's plan here.
-	// For now, Basic Plan allows instant search, which is what this is.
-	// We might check if the user is authenticated via middleware, but for the 'free partial access' or 'basic'
-	// we keep it open or require the token.
+	// Require authentication for search
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "Authentication required", http.StatusUnauthorized)
+		return
+	}
+
+	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		return auth.SecretKey, nil
+	})
+
+	if err != nil || !token.Valid {
+		http.Error(w, "Invalid token", http.StatusUnauthorized)
+		return
+	}
 
 	var req SearchRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {

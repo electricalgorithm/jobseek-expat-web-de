@@ -48,15 +48,22 @@ func SaveSearchHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Get User ID
+	// Get User ID and Subscription
 	var userID int
-	err = db.DB.QueryRow("SELECT id FROM users WHERE email = ?", email).Scan(&userID)
+	var subscription string
+	err = db.DB.QueryRow("SELECT id, subscription_plan FROM users WHERE email = ?", email).Scan(&userID, &subscription)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			http.Error(w, "User not found", http.StatusUnauthorized)
 			return
 		}
 		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+
+	// Check subscription - only pro users can save alerts
+	if subscription != "pro" {
+		http.Error(w, "This feature requires a Pro subscription", http.StatusForbidden)
 		return
 	}
 
