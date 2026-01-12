@@ -32,6 +32,9 @@ func ExecuteSearch(params SearchParams) ([]interface{}, error) {
 
 	args := []string{params.Keyword, "--country", params.Country, "--output", "json", "--results-wanted", resultsWanted}
 
+	// Explicitly select sites (excluding Glassdoor)
+	args = append(args, "--site", "linkedin", "--site", "indeed")
+
 	if params.Location != "" {
 		args = append(args, "--location", params.Location)
 	}
