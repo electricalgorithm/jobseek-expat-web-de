@@ -2,15 +2,18 @@ package email
 
 import (
 	"bytes"
+	"embed"
 	"encoding/base64"
 	"fmt"
 	"html/template"
 	"log"
 	"os"
-	"path/filepath"
 
 	"github.com/resend/resend-go/v3"
 )
+
+//go:embed template.html
+var emailTemplateFS embed.FS
 
 type JobResult struct {
 	Title   string `json:"title"`
@@ -121,19 +124,7 @@ func SendJobAlert(toEmail, userName string, userID, searchID int, jobs []interfa
 }
 
 func renderTemplate(data EmailData) (string, error) {
-	// Locate template file.
-	// In production, this path needs to relate to the binary location or be embedded.
-	// For dev, we look in internal/email/template.html
-	cwd, _ := os.Getwd()
-	tmplPath := filepath.Join(cwd, "internal", "email", "template.html")
-
-	// Fallback check if running from nested dir or bin?
-	if _, err := os.Stat(tmplPath); os.IsNotExist(err) {
-		// Try root relative?
-		tmplPath = "internal/email/template.html"
-	}
-
-	t, err := template.ParseFiles(tmplPath)
+	t, err := template.ParseFS(emailTemplateFS, "template.html")
 	if err != nil {
 		return "", fmt.Errorf("error parsing template: %v", err)
 	}
