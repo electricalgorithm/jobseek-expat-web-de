@@ -14,10 +14,117 @@ import (
 )
 
 func SaveSearchHandler(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
+	// Route based on method
+	switch r.Method {
+	case http.MethodGet:
+		listSearchesHandler(w, r)
+	case http.MethodPost:
+		createSearchHandler(w, r)
+	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+func listSearchesHandler(w http.ResponseWriter, r *http.Request) {
+	// 1. Verify Auth Token
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "Missing authorization header", http.StatusUnauthorized)
 		return
 	}
+
+	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		return auth.SecretKey, nil
+	})
+
+	if err != nil || !token.Valid {
+		http.Error(w, "Invalid token", http.StatusUnauthorized)
+		return
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		http.Error(w, "Invalid token claims", http.StatusUnauthorized)
+		return
+	}
+
+	email, ok := claims["email"].(string)
+	if !ok {
+		http.Error(w, "Invalid token email", http.StatusUnauthorized)
+		return
+	}
+
+	// Get User ID
+	var userID int
+	err = db.DB.QueryRow("SELECT id FROM users WHERE email = ?", email).Scan(&userID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "User not found", http.StatusUnauthorized)
+			return
+		}
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+
+	// Fetch all searches for this user
+	rows, err := db.DB.Query(`
+		SELECT id, keyword, country, location, language, frequency, hours_old, exclude, results_wanted, last_run 
+		FROM user_searches 
+		WHERE user_id = ?
+		ORDER BY id DESC
+	`, userID)
+	if err != nil {
+		http.Error(w, "Failed to fetch searches", http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var searches []models.UserSearch
+	for rows.Next() {
+		var s models.UserSearch
+		var location, language, exclude sql.NullString
+		var hoursOld, resultsWanted sql.NullInt64
+		var lastRun sql.NullTime
+
+		err := rows.Scan(&s.ID, &s.Keyword, &s.Country, &location, &language, &s.Frequency, &hoursOld, &exclude, &resultsWanted, &lastRun)
+		if err != nil {
+			continue
+		}
+
+		s.UserID = userID
+		if location.Valid {
+			s.Location = location.String
+		}
+		if language.Valid {
+			s.Language = language.String
+		}
+		if hoursOld.Valid {
+			s.HoursOld = int(hoursOld.Int64)
+		}
+		if exclude.Valid {
+			s.Exclude = exclude.String
+		}
+		if resultsWanted.Valid {
+			s.ResultsWanted = int(resultsWanted.Int64)
+		}
+		if lastRun.Valid {
+			s.LastRun = lastRun.Time
+		}
+
+		searches = append(searches, s)
+	}
+
+	// Return empty array if no searches
+	if searches == nil {
+		searches = []models.UserSearch{}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(searches)
+}
+
+func createSearchHandler(w http.ResponseWriter, r *http.Request) {
 
 	// 1. Verify Auth Token
 	authHeader := r.Header.Get("Authorization")
