@@ -76,4 +76,21 @@ func InitDB() {
 	_, _ = DB.Exec("ALTER TABLE user_searches ADD COLUMN hours_old INTEGER DEFAULT 24")
 	_, _ = DB.Exec("ALTER TABLE user_searches ADD COLUMN exclude TEXT DEFAULT ''")
 	_, _ = DB.Exec("ALTER TABLE user_searches ADD COLUMN results_wanted INTEGER DEFAULT 10")
+
+	createSentJobsTableSQL := `CREATE TABLE IF NOT EXISTS sent_jobs (
+		"id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+		"search_id" INTEGER NOT NULL,
+		"job_url" TEXT NOT NULL,
+		"sent_at" DATETIME DEFAULT CURRENT_TIMESTAMP,
+		FOREIGN KEY(search_id) REFERENCES user_searches(id),
+		UNIQUE(search_id, job_url)
+	);`
+
+	log.Println("Creating sent_jobs table...")
+	stmtSent, err := DB.Prepare(createSentJobsTableSQL)
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+	stmtSent.Exec()
+	log.Println("Sent jobs table created")
 }

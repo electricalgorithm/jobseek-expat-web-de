@@ -158,9 +158,19 @@ func RunJobSearchTask() {
 			continue
 		}
 
+		// FILTER DUPLICATES
+		results = filterNewJobs(t.ID, results)
+		if len(results) == 0 {
+			log.Printf("[Scheduler] All results were already sent for search %d", t.ID)
+			continue
+		}
+
 		// Send Email
 		if err := email.SendJobAlert(t.UserEmail, t.UserName, t.UserID, t.ID, results); err != nil {
 			log.Printf("[Scheduler] Failed to send email to %s: %v", t.UserEmail, err)
+		} else {
+			// Mark as sent only if email succeeded
+			markJobsAsSent(t.ID, results)
 		}
 
 		// Update Last Run
@@ -168,5 +178,72 @@ func RunJobSearchTask() {
 		if err != nil {
 			log.Printf("[Scheduler] Failed to update last_run for %d: %v", t.ID, err)
 		}
+	}
+}
+
+func filterNewJobs(searchID int, results []interface{}) []interface{} {
+	rows, err := db.DB.Query("SELECT job_url FROM sent_jobs WHERE search_id = ?", searchID)
+	if err != nil {
+		log.Printf("[Scheduler] Error fetching history for search %d: %v", searchID, err)
+		return results // Fail open? Or closed? Open ensures delivery but risks duplicate.
+	}
+	defer rows.Close()
+
+	sentMap := make(map[string]bool)
+	for rows.Next() {
+		var url string
+		if err := rows.Scan(&url); err == nil {
+			sentMap[url] = true
+		}
+	}
+
+	var newResults []interface{}
+	for _, item := range results {
+		job, ok := item.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		url, ok := job["job_url"].(string)
+		if !ok || url == "" {
+			continue
+		}
+
+		if !sentMap[url] {
+			newResults = append(newResults, item)
+		}
+	}
+	return newResults
+}
+
+func markJobsAsSent(searchID int, results []interface{}) {
+	tx, err := db.DB.Begin()
+	if err != nil {
+		log.Printf("[Scheduler] Error starting transaction: %v", err)
+		return
+	}
+	defer tx.Rollback()
+
+	stmt, err := tx.Prepare("INSERT OR IGNORE INTO sent_jobs (search_id, job_url) VALUES (?, ?)")
+	if err != nil {
+		log.Printf("[Scheduler] Error preparing statement: %v", err)
+		return
+	}
+	defer stmt.Close()
+
+	for _, item := range results {
+		job, ok := item.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		url, ok := job["job_url"].(string)
+		if !ok || url == "" {
+			continue
+		}
+		if _, err := stmt.Exec(searchID, url); err != nil {
+			log.Printf("[Scheduler] Error inserting job history: %v", err)
+		}
+	}
+	if err := tx.Commit(); err != nil {
+		log.Printf("[Scheduler] Error committing transaction: %v", err)
 	}
 }
