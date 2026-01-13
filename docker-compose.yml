@@ -24,6 +24,9 @@ services:
       - RESEND_API_KEY=${RESEND_API_KEY}
       - EMAIL_FROM=jobs@expatter.gyokhan.com
 
+      # AI & Analysis
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+
       # Scheduler settings
       - SCHEDULER_FREQUENCY=@every 1h
 
