@@ -41,6 +41,7 @@ func main() {
 	http.HandleFunc("/api/redirect", handlers.RedirectHandler)
 	http.HandleFunc("/api/unsubscribe", handlers.UnsubscribeHandler)
 	http.HandleFunc("/api/searches", handlers.SaveSearchHandler)
+	http.HandleFunc("/api/cv/analyze", handlers.AnalyzeCVHandler) // Pro feature
 
 	// Start Scheduler
 	scheduler := scheduler.NewScheduler()
