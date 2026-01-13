@@ -66,7 +66,7 @@ EXPOSE 8080
 ENV PORT=8080 \
     SCHEDULER_FREQUENCY="@every 1h" \
     APP_NAME="Expatter" \
-    APP_DOMAIN="http://localhost:8080" \
+    APP_DOMAIN="https://expatter.gyokhan.com" \
     FRONTEND_PATH="/app/frontend/dist"
 
 # Health check
