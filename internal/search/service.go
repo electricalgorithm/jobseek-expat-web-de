@@ -30,7 +30,7 @@ func ExecuteSearch(params SearchParams) ([]interface{}, error) {
 		resultsWanted = fmt.Sprintf("%d", params.ResultsWanted)
 	}
 
-	args := []string{params.Keyword, "--country", params.Country, "--output", "json", "--results-wanted", resultsWanted}
+	args := []string{"search", params.Keyword, "--country", params.Country, "--output", "json", "--results-wanted", resultsWanted}
 
 	// Explicitly select sites (excluding Glassdoor)
 	args = append(args, "--site", "linkedin", "--site", "indeed")
@@ -51,7 +51,7 @@ func ExecuteSearch(params SearchParams) ([]interface{}, error) {
 	log.Printf("Running search (Service): jobseek-expat %v", args)
 
 	// Execute CLI
-	cmdPath := getJobSeekPath()
+	cmdPath := GetJobSeekPath()
 	cmd := exec.Command(cmdPath, args...)
 
 	var stderr bytes.Buffer
@@ -71,7 +71,7 @@ func ExecuteSearch(params SearchParams) ([]interface{}, error) {
 	return results, nil
 }
 
-func getJobSeekPath() string {
+func GetJobSeekPath() string {
 	path, err := exec.LookPath("jobseek-expat")
 	if err == nil {
 		return path

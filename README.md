@@ -40,6 +40,12 @@ Expatter is a specialized job search platform that:
   - Customizable frequency (hourly/daily)
   - Duplicate prevention
   - Unsubscribe functionality
+- **CV Analysis** (Pro):
+  - AI-powered CV parsing using Google Gemini
+  - Automatic job title extraction
+  - Skills and experience analysis
+  - Personalized alert generation
+  - Privacy-first (CVs not stored)
 - **Payment Integration**: Mock payment verification system
 
 ## Project Structure
@@ -120,6 +126,7 @@ jobseek-web-be/
 | `SCHEDULER_FREQUENCY` | Cron schedule for alerts | `@every 1h` |
 | `DB_PATH` | SQLite database path | `./data/jobseek.db` |
 | `FRONTEND_PATH` | Frontend static files path | `../jobseek-web-fe/dist` |
+| `GEMINI_API_KEY` | Google Gemini API key for CV analysis | (required for CV analysis feature) |
 
 ## Database Schema
 
@@ -307,6 +314,37 @@ Verify payment and upgrade user.
 ```
 
 **Response**: `200 OK`
+
+### CV Analysis (Pro Only)
+
+#### POST `/api/cv/analyze`
+Analyze a CV using AI to extract job parameters and generate alerts.
+
+**Headers**:
+```
+Authorization: Bearer <token>
+Content-Type: multipart/form-data
+```
+
+**Form Data**:
+- `cv`: CV file (PDF, DOCX, or TXT, max 10MB)
+- `countries`: Comma-separated countries (optional, default: "Germany")
+- `locations`: Comma-separated locations (optional, default: "Remote")
+
+**Response**: `200 OK`
+```json
+{
+  "success": true,
+  "data": {
+    "job_titles": ["Software Engineer", "Backend Developer"],
+    "skills": ["Go", "Python", "Docker"],
+    "experience_years": 5,
+    "suggested_alerts": [...]
+  }
+}
+```
+
+See [CV_ANALYSIS_API.md](docs/CV_ANALYSIS_API.md) for detailed documentation.
 
 ### Utility
 

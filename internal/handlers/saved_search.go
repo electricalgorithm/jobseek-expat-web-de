@@ -3,7 +3,9 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"log"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"jobseek-web-be/internal/auth"
@@ -14,7 +16,14 @@ import (
 )
 
 func SaveSearchHandler(w http.ResponseWriter, r *http.Request) {
-	// Route based on method
+	// Check if this is a DELETE request with an ID in the path
+	// e.g., /api/searches/123
+	if r.Method == http.MethodDelete && r.URL.Path != "/api/searches" {
+		deleteSearchHandler(w, r)
+		return
+	}
+
+	// Route based on method for /api/searches
 	switch r.Method {
 	case http.MethodGet:
 		listSearchesHandler(w, r)
@@ -220,4 +229,93 @@ func createSearchHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]string{"message": "Search saved successfully"})
+}
+
+func deleteSearchHandler(w http.ResponseWriter, r *http.Request) {
+	// 1. Verify Auth Token
+	authHeader := r.Header.Get("Authorization")
+	if authHeader == "" {
+		http.Error(w, "Missing authorization header", http.StatusUnauthorized)
+		return
+	}
+
+	tokenString := strings.TrimPrefix(authHeader, "Bearer ")
+	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		return auth.SecretKey, nil
+	})
+
+	if err != nil || !token.Valid {
+		http.Error(w, "Invalid token", http.StatusUnauthorized)
+		return
+	}
+
+	claims, ok := token.Claims.(jwt.MapClaims)
+	if !ok {
+		http.Error(w, "Invalid token claims", http.StatusUnauthorized)
+		return
+	}
+
+	email, ok := claims["email"].(string)
+	if !ok {
+		http.Error(w, "Invalid token email", http.StatusUnauthorized)
+		return
+	}
+
+	// Get User ID
+	var userID int
+	err = db.DB.QueryRow("SELECT id FROM users WHERE email = ?", email).Scan(&userID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			http.Error(w, "User not found", http.StatusUnauthorized)
+			return
+		}
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+
+	// Extract search ID from URL path (e.g., /api/searches/123)
+	pathParts := strings.Split(r.URL.Path, "/")
+	if len(pathParts) < 4 {
+		http.Error(w, "Invalid URL", http.StatusBadRequest)
+		return
+	}
+
+	searchIDStr := pathParts[len(pathParts)-1]
+	searchID, err := strconv.Atoi(searchIDStr)
+	if err != nil {
+		http.Error(w, "Invalid search ID", http.StatusBadRequest)
+		return
+	}
+
+	// Log the deletion attempt
+	log.Printf("[Delete Alert] User %d attempting to delete search ID: %d", userID, searchID)
+
+	// Delete the search, but only if it belongs to this user
+	result, err := db.DB.Exec("DELETE FROM user_searches WHERE id = ? AND user_id = ?", searchID, userID)
+	if err != nil {
+		log.Printf("[Delete Alert] Error deleting search ID %d: %v", searchID, err)
+		http.Error(w, "Failed to delete search", http.StatusInternalServerError)
+		return
+	}
+
+	// Check if any rows were affected
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		log.Printf("[Delete Alert] Error getting rows affected for search ID %d: %v", searchID, err)
+		http.Error(w, "Database error", http.StatusInternalServerError)
+		return
+	}
+
+	log.Printf("[Delete Alert] Rows affected: %d", rowsAffected)
+
+	if rowsAffected == 0 {
+		log.Printf("[Delete Alert] Search ID %d not found or unauthorized for user %d", searchID, userID)
+		http.Error(w, "Search not found or unauthorized", http.StatusNotFound)
+		return
+	}
+
+	log.Printf("[Delete Alert] Successfully deleted search ID %d for user %d", searchID, userID)
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{"message": "Search deleted successfully"})
 }
