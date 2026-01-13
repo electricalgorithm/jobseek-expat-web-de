@@ -40,6 +40,7 @@ func main() {
 	http.HandleFunc("/api/search", handlers.SearchHandler)
 	http.HandleFunc("/api/redirect", handlers.RedirectHandler)
 	http.HandleFunc("/api/unsubscribe", handlers.UnsubscribeHandler)
+	http.Handle("/api/searches/", http.HandlerFunc(handlers.SaveSearchHandler))
 	http.HandleFunc("/api/searches", handlers.SaveSearchHandler)
 	http.HandleFunc("/api/cv/analyze", handlers.AnalyzeCVHandler) // Pro feature
 
